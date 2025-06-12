@@ -1,0 +1,11 @@
+{
+  "name": "utm-api",
+  "version": "1.0.0",
+  "description": "UTM lookup API for personalized landing pages",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
