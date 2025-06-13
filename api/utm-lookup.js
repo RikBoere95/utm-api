@@ -6,56 +6,37 @@ const supabase = createClient(
 )
 
 export default async function handler(req, res) {
-  // CORS headers
+  // Tell everyone they can talk to our robot
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   
   if (req.method === 'OPTIONS') {
     return res.status(200).end()
   }
 
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return res.status(405).json({ error: 'Wrong way to ask!' })
   }
 
+  // Get the special code from the website
   const { utm } = req.query
   if (!utm) {
-    return res.status(400).json({ error: 'UTM parameter is required' })
+    return res.status(400).json({ error: 'You forgot to tell me which person!' })
   }
 
   try {
+    // Ask the database for information
     const { data, error } = await supabase
       .from('contacts')
-      .select(`
-        utm,
-        first_name,
-        company_name,
-        company_benefits,
-        obstacle_1,
-        obstacle_2,
-        obstacle_3,
-        solution_1,
-        solution_2,
-        solution_3,
-        flow_title_1,
-        flow_1,
-        flow_title_2,
-        flow_2,
-        flow_title_3,
-        flow_3
-      `)
+      .select('*')
       .eq('utm', utm)
       .single()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        return res.status(404).json({ error: 'UTM not found' })
-      }
-      throw error
+      return res.status(404).json({ error: 'Person not found in our book!' })
     }
 
-    // Format for your frontend (keeping your current field names)
+    // Give back the information in the old format your website expects
     const response = {
       UTM: data.utm,
       FirstName: data.first_name,
@@ -75,16 +56,9 @@ export default async function handler(req, res) {
       Flow_3: data.flow_3
     }
 
-    // Cache for 5 minutes
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600')
-    
     return res.status(200).json(response)
 
   } catch (error) {
-    console.error('Database error:', error)
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    })
+    return res.status(500).json({ error: 'Robot is broken!' })
   }
 }
