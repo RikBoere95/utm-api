@@ -27,10 +27,10 @@ export default async function handler(req, res) {
   try {
     console.log(`🔍 Looking up UTM: ${utm}`)
 
-    // Get ALL fields from the database to see what we have
+    // Query Supabase for the contact
     const { data, error } = await supabase
       .from('contacts')
-      .select('*')  // Get everything
+      .select('*')
       .eq('utm', utm)
       .single()
 
@@ -42,27 +42,8 @@ export default async function handler(req, res) {
       throw error
     }
 
-    console.log('🔍 Raw database data:', data)
-
-    // 🔍 DEBUG: Return the raw data first to see what we have
-    const debugResponse = {
-      message: "DEBUG: Raw database record",
-      utm_searched: utm,
-      raw_data: data,
-      field_check: {
-        utm: data.utm || 'MISSING',
-        firstname: data.firstname || 'MISSING',
-        companyname: data.companyname || 'MISSING',
-        companybenefits: data.companybenefits ? 'PRESENT' : 'MISSING',
-        obstacle1: data.obstacle1 || 'MISSING',
-        solution1: data.solution1 || 'MISSING',
-        flowtitle1: data.flowtitle1 || 'MISSING',
-        flow1: data.flow1 || 'MISSING'
-      }
-    }
-
-    // Also create the formatted response
-    const formattedResponse = {
+    // Format response exactly as your current frontend expects
+    const response = {
       UTM: data.utm,
       FirstName: data.firstname,
       Company_Name: data.companyname,
@@ -79,22 +60,24 @@ export default async function handler(req, res) {
       Flow_2: data.flow2,
       Flow_Title_3: data.flowtitle3,
       Flow_3: data.flow3,
+      // Bonus fields from your database
       UTM_Full: data.utmfull,
       Profile_URL: data.profileurl,
       LinkedIn_URL: data.linkedinurl
     }
 
-    // Return both for debugging
-    return res.status(200).json({
-      debug: debugResponse,
-      formatted: formattedResponse
-    })
+    // Cache for better performance
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600')
+    
+    console.log(`✅ Found: ${data.firstname} at ${data.companyname}`)
+    
+    return res.status(200).json(response)
 
   } catch (error) {
     console.error('💥 Error:', error)
     return res.status(500).json({ 
       error: 'Internal server error',
-      details: error.message
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     })
   }
 }
