@@ -19,7 +19,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // Get the UTM parameter
   const { utm } = req.query
   if (!utm) {
     return res.status(400).json({ error: 'UTM parameter is required' })
@@ -28,7 +27,7 @@ export default async function handler(req, res) {
   try {
     console.log(`🔍 Looking up UTM: ${utm}`)
 
-    // Query Supabase using 'url' column (which contains your UTM)
+    // Query Supabase using 'utm' column (matches your database)
     const { data, error } = await supabase
       .from('contacts')
       .select(`
@@ -49,6 +48,7 @@ export default async function handler(req, res) {
         flowtitle3,
         flow3,
         utmfull,
+        profileurl,
         linkedinurl
       `)
       .eq('utm', utm)
@@ -62,10 +62,10 @@ export default async function handler(req, res) {
       throw error
     }
 
-    // Format response to match what your current website expects
-    // (Keeping your original field names so your website doesn't break)
+    // Format response to match your frontend expectations
+    // ✅ FIXED: Using data.utm instead of data.url
     const response = {
-      UTM: data.url,
+      UTM: data.utm,                    // ✅ Fixed: was data.url
       FirstName: data.firstname,
       Company_Name: data.companyname,
       Company_Benefits: data.companybenefits,
@@ -81,12 +81,12 @@ export default async function handler(req, res) {
       Flow_2: data.flow2,
       Flow_Title_3: data.flowtitle3,
       Flow_3: data.flow3,
-      // Bonus: Your additional fields are now available too!
-      CS_Landing_Page: data.cslandingpage,
-      Profile_URL: data.profileurl
+      // ✅ Bonus: Added the extra fields from your database
+      UTM_Full: data.utmfull,
+      Profile_URL: data.profileurl,
+      LinkedIn_URL: data.linkedinurl
     }
 
-    // Cache for better performance
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600')
     
     console.log(`✅ Found: ${data.firstname} at ${data.companyname}`)
