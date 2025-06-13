@@ -27,30 +27,10 @@ export default async function handler(req, res) {
   try {
     console.log(`🔍 Looking up UTM: ${utm}`)
 
-    // Query Supabase using 'utm' column (matches your database)
+    // Get ALL fields from the database to see what we have
     const { data, error } = await supabase
       .from('contacts')
-      .select(`
-        utm,
-        firstname,
-        companyname,
-        companybenefits,
-        obstacle1,
-        obstacle2,
-        obstacle3,
-        solution1,
-        solution2,
-        solution3,
-        flowtitle1,
-        flow1,
-        flowtitle2,
-        flow2,
-        flowtitle3,
-        flow3,
-        utmfull,
-        profileurl,
-        linkedinurl
-      `)
+      .select('*')  // Get everything
       .eq('utm', utm)
       .single()
 
@@ -62,10 +42,28 @@ export default async function handler(req, res) {
       throw error
     }
 
-    // Format response to match your frontend expectations
-    // ✅ FIXED: Using data.utm instead of data.url
-    const response = {
-      UTM: data.utm,                    // ✅ Fixed: was data.url
+    console.log('🔍 Raw database data:', data)
+
+    // 🔍 DEBUG: Return the raw data first to see what we have
+    const debugResponse = {
+      message: "DEBUG: Raw database record",
+      utm_searched: utm,
+      raw_data: data,
+      field_check: {
+        utm: data.utm || 'MISSING',
+        firstname: data.firstname || 'MISSING',
+        companyname: data.companyname || 'MISSING',
+        companybenefits: data.companybenefits ? 'PRESENT' : 'MISSING',
+        obstacle1: data.obstacle1 || 'MISSING',
+        solution1: data.solution1 || 'MISSING',
+        flowtitle1: data.flowtitle1 || 'MISSING',
+        flow1: data.flow1 || 'MISSING'
+      }
+    }
+
+    // Also create the formatted response
+    const formattedResponse = {
+      UTM: data.utm,
       FirstName: data.firstname,
       Company_Name: data.companyname,
       Company_Benefits: data.companybenefits,
@@ -81,23 +79,22 @@ export default async function handler(req, res) {
       Flow_2: data.flow2,
       Flow_Title_3: data.flowtitle3,
       Flow_3: data.flow3,
-      // ✅ Bonus: Added the extra fields from your database
       UTM_Full: data.utmfull,
       Profile_URL: data.profileurl,
       LinkedIn_URL: data.linkedinurl
     }
 
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600')
-    
-    console.log(`✅ Found: ${data.firstname} at ${data.companyname}`)
-    
-    return res.status(200).json(response)
+    // Return both for debugging
+    return res.status(200).json({
+      debug: debugResponse,
+      formatted: formattedResponse
+    })
 
   } catch (error) {
     console.error('💥 Error:', error)
     return res.status(500).json({ 
       error: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: error.message
     })
   }
 }
